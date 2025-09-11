@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Don't Show Me Gore!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-[#15202b] text-gray-100 p-4 w-80">
+    <h1 class="text-xl font-bold text-sky-400 mb-4">
+      Don't Show Me Gore!
+    </h1>
+
+    <!-- Enable toggle -->
+    <div class="flex items-center justify-between mb-4">
+      <label for="enableToggle">Enable Shields</label>
+      <input type="checkbox" id="enableToggle"
+        class="w-5 h-5 text-sky-500 border-gray-500 rounded"/>
+    </div>
+
+    <!-- Add handle -->
+    <div class="flex space-x-2 mb-4">
+      <input id="newHandle" type="text" placeholder="@handle"
+        class="flex-1 bg-[#253341] border border-gray-600 rounded px-2 py-1 text-sm"/>
+      <button id="addBtn"
+        class="bg-sky-500 hover:bg-sky-600 px-3 py-1 rounded text-sm font-bold">
+        Add
+      </button>
+    </div>
+
+    <!-- Trusted list -->
+    <div id="trustedList"
+      class="max-h-40 overflow-y-auto bg-[#192734] rounded border border-gray-700 mb-4">
+      <!-- Handles render here -->
+    </div>
+
+    <!-- Export / Import buttons -->
+    <div class="flex space-x-2 mb-2">
+      <button id="exportBtn"
+        class="flex-1 bg-sky-500 hover:bg-sky-600 px-3 py-1 rounded text-sm font-bold">
+        Export
+      </button>
+      <button id="importBtn"
+        class="flex-1 bg-emerald-500 hover:bg-emerald-600 px-3 py-1 rounded text-sm font-bold">
+        Import
+      </button>
+    </div>
+
+    <!-- JSON area -->
+    <textarea id="importArea"
+      class="w-full h-20 bg-[#253341] border border-gray-600 rounded px-2 py-1 text-xs"
+      placeholder="Export JSON here or paste to import..."></textarea>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
