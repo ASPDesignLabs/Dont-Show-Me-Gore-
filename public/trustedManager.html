@@ -2,72 +2,135 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Trusted Creators</title>
+    <title>Manage Creators</title>
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body class="bg-black text-gray-100 min-h-screen flex flex-col">
     <header class="p-4 border-b border-neutral-800">
-      <h1 class="text-xl font-bold">Trusted Creators</h1>
-      <p class="text-sm text-gray-400">Manage who can bypass shields</p>
-
-      <!-- Sort buttons -->
-      <div class="mt-3 flex space-x-2 text-sm">
-        <button
-          id="sortAlphaBtn"
-          class="px-3 py-1 rounded bg-neutral-800 hover:bg-neutral-700 font-semibold"
-        >
-          Sort: A–Z
-        </button>
-        <button
-          id="sortRecentBtn"
-          class="px-3 py-1 rounded bg-neutral-800 hover:bg-neutral-700 font-semibold"
-        >
-          Sort: Recent
-        </button>
-      </div>
+      <h1 class="text-xl font-bold">Manage Creators</h1>
+      <p class="text-sm text-gray-400">
+        Add, edit, search, sort, or clear your Trusted and Blacklisted creators
+      </p>
     </header>
 
-    <main class="flex-1 p-4 space-y-4">
-      <!-- Add -->
-      <div class="flex space-x-2">
+    <main class="flex-1 p-4 space-y-8 overflow-y-auto">
+      <!-- Trusted Creators Section -->
+      <section>
+        <h2 class="text-lg font-bold text-sky-400 mb-2">Trusted Creators</h2>
+
+        <!-- Add -->
+        <div class="flex space-x-2 mb-2">
+          <input
+            id="trustedInput"
+            type="text"
+            placeholder="@handle"
+            class="flex-1 bg-neutral-900 border border-neutral-800 rounded px-2 py-1 text-sm"
+          />
+          <button
+            id="addTrustedBtn"
+            class="bg-neutral-800 hover:bg-neutral-700 px-3 py-1 rounded text-sm font-semibold"
+          >
+            Add
+          </button>
+        </div>
+
+        <!-- Search -->
         <input
-          id="handleInput"
+          id="trustedFilter"
           type="text"
-          placeholder="@handle"
-          class="flex-1 bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-700"
+          placeholder="Search Trusted..."
+          class="w-full mb-2 bg-neutral-900 border border-neutral-800 rounded px-2 py-1 text-sm"
         />
-        <button
-          id="addHandleBtn"
-          class="bg-neutral-800 hover:bg-neutral-700 px-4 py-2 rounded text-sm font-semibold"
-        >
-          Add
-        </button>
-      </div>
 
-      <!-- Search -->
-      <input
-        id="filterBox"
-        type="text"
-        placeholder="Search"
-        class="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-700"
-      />
+        <!-- Sort + Clear -->
+        <div class="flex justify-between mb-2">
+          <div class="space-x-2">
+            <button
+              id="trustedSortAlpha"
+              class="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-sm"
+            >
+              Sort A–Z
+            </button>
+            <button
+              id="trustedSortRecent"
+              class="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-sm"
+            >
+              Sort Recent
+            </button>
+          </div>
+          <button
+            id="clearTrustedBtn"
+            class="text-red-500 hover:text-red-400 text-sm"
+          >
+            Clear All
+          </button>
+        </div>
 
-      <!-- Clear All -->
-      <div class="text-right">
-        <button
-          id="clearAllBtn"
-          class="text-sm text-red-500 hover:text-red-400 font-semibold"
-        >
-          Clear All
-        </button>
-      </div>
+        <div
+          id="trustedListContainer"
+          class="bg-neutral-900 rounded border border-neutral-800 p-2 max-h-64 overflow-y-auto"
+        ></div>
+      </section>
 
-      <!-- Trusted list -->
-      <div
-        id="trustedListContainer"
-        class="rounded-lg border border-neutral-800 divide-y divide-neutral-800 overflow-hidden"
-      ></div>
+      <!-- Blacklisted Creators Section -->
+      <section>
+        <h2 class="text-lg font-bold text-red-400 mb-2">Blacklisted Creators</h2>
+
+        <!-- Add -->
+        <div class="flex space-x-2 mb-2">
+          <input
+            id="blacklistInput"
+            type="text"
+            placeholder="@handle"
+            class="flex-1 bg-neutral-900 border border-neutral-800 rounded px-2 py-1 text-sm"
+          />
+          <button
+            id="addBlacklistBtn"
+            class="bg-neutral-800 hover:bg-neutral-700 px-3 py-1 rounded text-sm font-semibold"
+          >
+            Add
+          </button>
+        </div>
+
+        <!-- Search -->
+        <input
+          id="blacklistFilter"
+          type="text"
+          placeholder="Search Blacklist..."
+          class="w-full mb-2 bg-neutral-900 border border-neutral-800 rounded px-2 py-1 text-sm"
+        />
+
+        <!-- Sort + Clear -->
+        <div class="flex justify-between mb-2">
+          <div class="space-x-2">
+            <button
+              id="blacklistSortAlpha"
+              class="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-sm"
+            >
+              Sort A–Z
+            </button>
+            <button
+              id="blacklistSortRecent"
+              class="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-sm"
+            >
+              Sort Recent
+            </button>
+          </div>
+          <button
+            id="clearBlacklistBtn"
+            class="text-red-500 hover:text-red-400 text-sm"
+          >
+            Clear All
+          </button>
+        </div>
+
+        <div
+          id="blacklistListContainer"
+          class="bg-neutral-900 rounded border border-neutral-800 p-2 max-h-64 overflow-y-auto"
+        ></div>
+      </section>
     </main>
+
     <script src="trustedManager.js"></script>
   </body>
 </html>

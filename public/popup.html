@@ -20,8 +20,8 @@
       />
     </div>
 
-    <!-- Add handle -->
-    <div class="flex space-x-2 mb-4">
+    <!-- Add Trusted Handle -->
+    <div class="flex space-x-2 mb-2">
       <input
         id="newHandle"
         type="text"
@@ -37,20 +37,44 @@
     </div>
 
     <!-- Trusted list -->
+    <h2 class="text-lg font-bold text-sky-400 mb-1">Trusted Creators</h2>
     <div
       id="trustedList"
-      class="max-h-40 overflow-y-auto bg-[#192734] rounded border border-gray-700 mb-4"
+      class="max-h-28 overflow-y-auto bg-[#192734] rounded border border-gray-700 mb-2"
     ></div>
+    <div class="flex justify-end mb-4">
+      <button
+        id="clearTrustedBtn"
+        class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm font-bold"
+      >
+        Clear Trusted
+      </button>
+    </div>
 
-<!-- Manage List Button -->
-<div class="mb-4">
-  <button
-    id="manageListBtn"
-    class="w-full bg-neutral-800 hover:bg-neutral-700 px-3 py-2 rounded text-sm font-semibold"
-  >
-    Manage Trusted Creators →
-  </button>
-</div>
+    <!-- Blacklist -->
+    <h2 class="text-lg font-bold text-red-400 mb-1">Blacklisted Creators</h2>
+    <div
+      id="blacklistList"
+      class="max-h-28 overflow-y-auto bg-[#192734] rounded border border-gray-700 mb-2"
+    ></div>
+    <div class="flex justify-end mb-4">
+      <button
+        id="clearBlacklistBtn"
+        class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm font-bold"
+      >
+        Clear Blacklist
+      </button>
+    </div>
+
+    <!-- Manage Lists Button -->
+    <div class="mb-4">
+      <button
+        id="manageListBtn"
+        class="w-full bg-neutral-800 hover:bg-neutral-700 px-3 py-2 rounded text-sm font-semibold"
+      >
+        Manage Lists →
+      </button>
+    </div>
 
     <!-- Export / Import buttons -->
     <div class="flex space-x-2 mb-2">

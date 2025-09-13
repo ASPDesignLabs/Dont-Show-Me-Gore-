@@ -3,14 +3,16 @@
 // Features:
 // - Covers autoplay videos/iframes on X/Twitter with shields until clicked
 // - Trusted Creators list (synced via chrome.storage.sync)
-// - Inline Trust/Untrust toggle in shield overlay
-// - Supports overlay presets (solid/gradient), opacity, border
+// - Blacklisted Creators list: hides posts entirely, replaced with cat pics
+// - Inline Trust/Untrust + Blacklist buttons inside shield overlay
+// - Overlay supports presets (solid/gradient), opacity, border
 // - Ads remain unshielded (ToS compliant)
 
 // ----------------------
 // Globals
 // ----------------------
 let trustedCreators = [];
+let blacklistedCreators = [];
 let overlayPreset = "custom";
 
 // Overlay settings
@@ -23,6 +25,14 @@ let overlayGradientAngle = 135;
 let overlayBorderEnabled = true;
 let overlayBorderColor = "#FF0000";
 let overlayBorderWidth = 3;
+
+// Local cat pics bundled in /cat
+const catPics = [
+  chrome.runtime.getURL("cat/cat1.jpg"),
+  chrome.runtime.getURL("cat/cat2.jpg"),
+  chrome.runtime.getURL("cat/cat3.jpg"),
+  chrome.runtime.getURL("cat/cat4.jpg"),
+];
 
 // Preset map
 const overlayPresets = {
@@ -72,6 +82,7 @@ function loadSettings(callback) {
   chrome.storage.sync.get(
     {
       trustedCreators: [],
+      blacklistedCreators: [],
       shieldEnabled: true,
       overlayPreset: "custom",
       overlayMode: "solid",
@@ -86,6 +97,7 @@ function loadSettings(callback) {
     },
     (data) => {
       trustedCreators = data.trustedCreators || [];
+      blacklistedCreators = data.blacklistedCreators || [];
       overlayPreset = data.overlayPreset || "custom";
 
       if (overlayPreset !== "custom" && overlayPresets[overlayPreset]) {
@@ -146,7 +158,27 @@ function buildOverlayBackground() {
 }
 
 // ----------------------
-// Shield Rendering
+// Blacklist Logic
+// ----------------------
+function isBlacklisted(tweet) {
+  const handle = getTweetHandle(tweet);
+  return handle && blacklistedCreators.includes(handle);
+}
+
+function replaceWithCat(tweet) {
+  const img = catPics[Math.floor(Math.random() * catPics.length)];
+  tweet.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center;color:#fff;">
+      <img src="${img}" style="max-width:100%;border-radius:8px;" />
+      <p style="margin-top:8px;font-size:14px;color:#aaa;">
+        Post hidden. This creator is blacklisted.<br/>Enjoy a cat instead 🐱
+      </p>
+    </div>
+  `;
+}
+
+// ----------------------
+// Shield Overlay Renderer
 // ----------------------
 function wrapMediaWithShield(mediaElement) {
   if (mediaElement.dataset.protected === "true") return;
@@ -160,7 +192,7 @@ function wrapMediaWithShield(mediaElement) {
 
   const tweet = mediaElement.closest('[data-testid="tweet"]');
   const handle = tweet ? getTweetHandle(tweet) : null;
-  const isTrusted = handle && trustedCreators.includes(handle);
+  const isTrustedAcc = handle && trustedCreators.includes(handle);
 
   const shield = document.createElement("div");
   const background = buildOverlayBackground();
@@ -185,16 +217,23 @@ function wrapMediaWithShield(mediaElement) {
     color:#fff;
   `;
 
-  // Trust toggle button
-  let trustHtml = "";
+  let actionHtml = "";
   if (handle) {
-    trustHtml = `
-      <div id="trust-toggle"
-           style="margin-top:12px; padding:4px 10px; border-radius:4px;
-                  font-size:12px; font-weight:bold;
-                  background:${isTrusted ? "#059669" : "#dc2626"};
-                  color:#fff; cursor:pointer; display:inline-block">
-        ${isTrusted ? "Trusted" : "+ Trust"} ${handle}
+    actionHtml = `
+      <div style="margin-top:12px; display:flex; flex-direction:column; gap:6px;">
+        <div id="trust-toggle"
+             style="padding:4px 10px; border-radius:4px;
+                    font-size:12px; font-weight:bold;
+                    background:${isTrustedAcc ? "#059669" : "#dc2626"};
+                    color:#fff; cursor:pointer; text-align:center;">
+          ${isTrustedAcc ? "Trusted" : "+ Trust"} ${handle}
+        </div>
+        <div id="blacklist-toggle"
+             style="padding:4px 10px; border-radius:4px;
+                    font-size:12px; font-weight:bold;
+                    background:#6d28d9; color:#fff; cursor:pointer; text-align:center;">
+          🚫 Blacklist ${handle}
+        </div>
       </div>`;
   }
 
@@ -202,7 +241,7 @@ function wrapMediaWithShield(mediaElement) {
     <div style="font-size:22px; margin-bottom:8px;">🛡️</div>
     <div style="font-size:14px; margin-bottom:6px;">Protected by Don't Show Me Gore!</div>
     <div style="font-size:12px; color:#aaa;">Click shield to unlock</div>
-    ${trustHtml}
+    ${actionHtml}
   `;
 
   container.appendChild(shield);
@@ -218,27 +257,41 @@ function wrapMediaWithShield(mediaElement) {
     }, 250);
   }
 
-  // Trust/untrust toggle
   if (handle) {
-    const btn = shield.querySelector("#trust-toggle");
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      e.preventDefault();
+    // Trust/Untrust toggle
+    const trustBtn = shield.querySelector("#trust-toggle");
+    if (trustBtn) {
+      trustBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (trustedCreators.includes(handle)) {
+          trustedCreators = trustedCreators.filter((h) => h !== handle);
+        } else {
+          trustedCreators.push(handle);
+        }
+        chrome.storage.sync.set({ trustedCreators });
+        unlockAndRemove();
+      });
+    }
 
-      if (trustedCreators.includes(handle)) {
-        trustedCreators = trustedCreators.filter((h) => h !== handle);
-      } else {
-        trustedCreators.push(handle);
-      }
-
-      chrome.storage.sync.set({ trustedCreators });
-      unlockAndRemove();
-    });
+    // Blacklist toggle
+    const blacklistBtn = shield.querySelector("#blacklist-toggle");
+    if (blacklistBtn) {
+      blacklistBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (!blacklistedCreators.includes(handle)) {
+          blacklistedCreators.push(handle);
+          chrome.storage.sync.set({ blacklistedCreators });
+          replaceWithCat(tweet);
+        }
+      });
+    }
   }
 
-  // Unlock by clicking shield background
+  // Normal unlock
   shield.addEventListener("click", (e) => {
-    if (e.target.id !== "trust-toggle") {
+    if (e.target.id !== "trust-toggle" && e.target.id !== "blacklist-toggle") {
       unlockAndRemove();
     }
   });
@@ -262,10 +315,20 @@ function isAdElement(mediaElement) {
 }
 
 // ----------------------
-// Protect Videos & Frames
+// Protect Media
 // ----------------------
 function protectMedia() {
   document.querySelectorAll("video:not([data-protected])").forEach((vid) => {
+    const tweet = vid.closest('[data-testid="tweet"]');
+    if (!tweet) return;
+
+    // Blacklist has top priority
+    if (isBlacklisted(tweet)) {
+      replaceWithCat(tweet);
+      vid.dataset.protected = "true";
+      return;
+    }
+
     if (isAdElement(vid) || isTrusted(vid)) {
       vid.dataset.protected = "true";
     } else {
@@ -274,6 +337,15 @@ function protectMedia() {
   });
 
   document.querySelectorAll("iframe:not([data-protected])").forEach((frame) => {
+    const tweet = frame.closest('[data-testid="tweet"]');
+    if (!tweet) return;
+
+    if (isBlacklisted(tweet)) {
+      replaceWithCat(tweet);
+      frame.dataset.protected = "true";
+      return;
+    }
+
     if (frame.src.includes("twitter.com") || frame.src.includes("x.com")) {
       if (isAdElement(frame) || isTrusted(frame)) {
         frame.dataset.protected = "true";

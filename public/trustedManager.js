@@ -1,107 +1,189 @@
 let trustedCreators = [];
-let sortMode = "alpha"; // "alpha" = alphabetical, "recent" = most recent first
+let blacklistedCreators = [];
+let trustedSortMode = "alpha";
+let blacklistSortMode = "alpha";
 
-function loadTrusted() {
-  chrome.storage.sync.get(["trustedCreators"], (data) => {
-    trustedCreators = data.trustedCreators || [];
-    renderList();
+// -------------------
+// Load/Save
+// -------------------
+function loadData() {
+  chrome.storage.sync.get(
+    ["trustedCreators", "blacklistedCreators"],
+    (data) => {
+      trustedCreators = data.trustedCreators || [];
+      blacklistedCreators = data.blacklistedCreators || [];
+      renderTrusted();
+      renderBlacklist();
+    }
+  );
+}
+
+function saveData() {
+  chrome.storage.sync.set({
+    trustedCreators,
+    blacklistedCreators,
   });
 }
 
-function saveTrusted() {
-  chrome.storage.sync.set({ trustedCreators });
-}
-
-function renderList() {
-  const filter = document.getElementById("filterBox").value.toLowerCase();
+// -------------------
+// Trusted Rendering
+// -------------------
+function renderTrusted() {
+  const filter = document
+    .getElementById("trustedFilter")
+    .value.toLowerCase();
   const container = document.getElementById("trustedListContainer");
   container.innerHTML = "";
 
   let list = [...trustedCreators];
-  if (sortMode === "alpha") {
-    list.sort((a, b) => a.localeCompare(b));
-  } else {
-    list = list.slice().reverse(); // most recent entries appear first
-  }
+  if (trustedSortMode === "alpha") list.sort((a, b) => a.localeCompare(b));
+  else list = list.slice().reverse();
 
   list
     .filter((h) => h.toLowerCase().includes(filter))
     .forEach((handle, idx) => {
       const row = document.createElement("div");
       row.className =
-        "flex items-center justify-between px-3 py-2 bg-black hover:bg-neutral-900";
+        "flex items-center justify-between px-2 py-1 bg-black hover:bg-neutral-900 rounded mb-1";
 
-      // Inline editable field
       const input = document.createElement("input");
       input.value = handle;
       input.className =
         "flex-1 bg-transparent text-sm font-medium outline-none text-gray-100";
       input.onchange = () => {
         trustedCreators[idx] = input.value.trim();
-        saveTrusted();
+        saveData();
       };
-
-      // Remove button
-      const removeBtn = document.createElement("button");
-      removeBtn.className =
-        "ml-3 text-gray-500 hover:text-red-500 font-bold text-sm";
-      removeBtn.textContent = "✖";
-      removeBtn.onclick = () => {
-        trustedCreators = trustedCreators.filter((h) => h !== handle);
-        saveTrusted();
-        renderList();
-      };
-
-      // Keyboard shortcut: Delete to remove
       input.addEventListener("keydown", (e) => {
         if (e.key === "Delete") {
-          trustedCreators = trustedCreators.filter((h) => h !== handle);
-          saveTrusted();
-          renderList();
+          trustedCreators.splice(idx, 1);
+          saveData();
+          renderTrusted();
         }
       });
+
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "text-red-400 hover:text-red-600 text-xs font-bold";
+      removeBtn.textContent = "✖";
+      removeBtn.onclick = () => {
+        trustedCreators.splice(idx, 1);
+        saveData();
+        renderTrusted();
+      };
 
       row.append(input, removeBtn);
       container.appendChild(row);
     });
 }
 
-// Add new handle
-document.getElementById("addHandleBtn").onclick = () => {
-  const val = document.getElementById("handleInput").value.trim();
+// -------------------
+// Blacklist Rendering
+// -------------------
+function renderBlacklist() {
+  const filter = document
+    .getElementById("blacklistFilter")
+    .value.toLowerCase();
+  const container = document.getElementById("blacklistListContainer");
+  container.innerHTML = "";
+
+  let list = [...blacklistedCreators];
+  if (blacklistSortMode === "alpha") list.sort((a, b) => a.localeCompare(b));
+  else list = list.slice().reverse();
+
+  list
+    .filter((h) => h.toLowerCase().includes(filter))
+    .forEach((handle, idx) => {
+      const row = document.createElement("div");
+      row.className =
+        "flex items-center justify-between px-2 py-1 bg-black hover:bg-neutral-900 rounded mb-1";
+
+      const input = document.createElement("input");
+      input.value = handle;
+      input.className =
+        "flex-1 bg-transparent text-sm font-medium outline-none text-red-400";
+      input.onchange = () => {
+        blacklistedCreators[idx] = input.value.trim();
+        saveData();
+      };
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Delete") {
+          blacklistedCreators.splice(idx, 1);
+          saveData();
+          renderBlacklist();
+        }
+      });
+
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "text-red-400 hover:text-red-600 text-xs font-bold";
+      removeBtn.textContent = "✖";
+      removeBtn.onclick = () => {
+        blacklistedCreators.splice(idx, 1);
+        saveData();
+        renderBlacklist();
+      };
+
+      row.append(input, removeBtn);
+      container.appendChild(row);
+    });
+}
+
+// -------------------
+// Trusted Events
+// -------------------
+document.getElementById("addTrustedBtn").onclick = () => {
+  const val = document.getElementById("trustedInput").value.trim();
   if (!val) return;
   trustedCreators.push(val);
-  saveTrusted();
-  document.getElementById("handleInput").value = "";
-  renderList();
+  saveData();
+  document.getElementById("trustedInput").value = "";
+  renderTrusted();
 };
-
-// Add on Enter
-document.getElementById("handleInput").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") document.getElementById("addHandleBtn").click();
-});
-
-// Search filter
-document.getElementById("filterBox").oninput = () => renderList();
-
-// Clear All button
-document.getElementById("clearAllBtn").onclick = () => {
+document.getElementById("trustedFilter").oninput = () => renderTrusted();
+document.getElementById("clearTrustedBtn").onclick = () => {
   if (confirm("Clear all trusted creators?")) {
     trustedCreators = [];
-    saveTrusted();
-    renderList();
+    saveData();
+    renderTrusted();
   }
 };
-
-// Sort toggle buttons
-document.getElementById("sortAlphaBtn").onclick = () => {
-  sortMode = "alpha";
-  renderList();
+document.getElementById("trustedSortAlpha").onclick = () => {
+  trustedSortMode = "alpha";
+  renderTrusted();
+};
+document.getElementById("trustedSortRecent").onclick = () => {
+  trustedSortMode = "recent";
+  renderTrusted();
 };
 
-document.getElementById("sortRecentBtn").onclick = () => {
-  sortMode = "recent";
-  renderList();
+// -------------------
+// Blacklist Events
+// -------------------
+document.getElementById("addBlacklistBtn").onclick = () => {
+  const val = document.getElementById("blacklistInput").value.trim();
+  if (!val) return;
+  blacklistedCreators.push(val);
+  saveData();
+  document.getElementById("blacklistInput").value = "";
+  renderBlacklist();
+};
+document.getElementById("blacklistFilter").oninput = () => renderBlacklist();
+document.getElementById("clearBlacklistBtn").onclick = () => {
+  if (confirm("Clear all blacklisted creators?")) {
+    blacklistedCreators = [];
+    saveData();
+    renderBlacklist();
+  }
+};
+document.getElementById("blacklistSortAlpha").onclick = () => {
+  blacklistSortMode = "alpha";
+  renderBlacklist();
+};
+document.getElementById("blacklistSortRecent").onclick = () => {
+  blacklistSortMode = "recent";
+  renderBlacklist();
 };
 
-loadTrusted();
+// -------------------
+// Init
+// -------------------
+loadData();

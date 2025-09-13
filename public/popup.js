@@ -1,56 +1,10 @@
 let trustedCreators = [];
-
-// Preset definitions
-const overlayPresets = {
-  custom: { label: "Custom" },
-  twitterDark: {
-    label: "Twitter Dark",
-    mode: "solid",
-    color: "#000000",
-    opacity: 0.9,
-    borderEnabled: true,
-    borderColor: "#FFFFFF",
-    borderWidth: 2,
-  },
-  twitterLight: {
-    label: "Twitter Light",
-    mode: "solid",
-    color: "#FFFFFF",
-    opacity: 0.9,
-    borderEnabled: true,
-    borderColor: "#000000",
-    borderWidth: 2,
-  },
-  skyGradient: {
-    label: "Sky → Dark Blue",
-    mode: "gradient",
-    gradientStart: "#1DA1F2",
-    gradientEnd: "#15202B",
-    gradientAngle: 135,
-    opacity: 0.9,
-  },
-  sunrise: {
-    label: "Sunrise Fade",
-    mode: "gradient",
-    gradientStart: "#FF9A9E",
-    gradientEnd: "#FAD0C4",
-    gradientAngle: 45,
-    opacity: 0.9,
-  },
-  emerald: {
-    label: "Emerald Fade",
-    mode: "gradient",
-    gradientStart: "#10B981",
-    gradientEnd: "#064E3B",
-    gradientAngle: 135,
-    opacity: 0.9,
-  },
-};
+let blacklistedCreators = [];
 
 // ---------------------
-// Trusted List Handling
+// Trusted Handling
 // ---------------------
-function renderList() {
+function renderTrusted() {
   const list = document.getElementById("trustedList");
   list.innerHTML = "";
 
@@ -68,8 +22,8 @@ function renderList() {
     removeBtn.textContent = "✖";
     removeBtn.onclick = () => {
       trustedCreators.splice(idx, 1);
-      saveTrustedList();
-      renderList();
+      saveTrusted();
+      renderTrusted();
     };
 
     item.append(span, removeBtn);
@@ -77,18 +31,130 @@ function renderList() {
   });
 }
 
-function saveTrustedList() {
+function saveTrusted() {
   chrome.storage.sync.set({ trustedCreators });
 }
 
-function loadTrustedList() {
-  chrome.storage.sync.get(["trustedCreators", "shieldEnabled"], (data) => {
+function loadTrusted() {
+  chrome.storage.sync.get(["trustedCreators"], (data) => {
     trustedCreators = data.trustedCreators || [];
-    renderList();
-    document.getElementById("enableToggle").checked =
-      data.shieldEnabled !== false;
+    renderTrusted();
   });
 }
+
+document.getElementById("addBtn").onclick = () => {
+  const val = document.getElementById("newHandle").value.trim();
+  if (!val) return;
+  trustedCreators.push(val);
+  saveTrusted();
+  document.getElementById("newHandle").value = "";
+  renderTrusted();
+};
+
+document.getElementById("clearTrustedBtn").onclick = () => {
+  if (confirm("Clear trusted creators?")) {
+    trustedCreators = [];
+    saveTrusted();
+    renderTrusted();
+  }
+};
+
+// ---------------------
+// Blacklist Handling
+// ---------------------
+function renderBlacklist() {
+  const list = document.getElementById("blacklistList");
+  list.innerHTML = "";
+
+  blacklistedCreators.forEach((handle, idx) => {
+    const item = document.createElement("div");
+    item.className =
+      "flex items-center justify-between px-2 py-1 border-b border-gray-700";
+
+    const span = document.createElement("span");
+    span.className = "text-sm font-semibold text-red-400";
+    span.textContent = handle;
+
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "text-red-400 hover:text-red-600 text-xs font-bold";
+    removeBtn.textContent = "✖";
+    removeBtn.onclick = () => {
+      blacklistedCreators.splice(idx, 1);
+      saveBlacklist();
+      renderBlacklist();
+    };
+
+    item.append(span, removeBtn);
+    list.appendChild(item);
+  });
+}
+
+function saveBlacklist() {
+  chrome.storage.sync.set({ blacklistedCreators });
+}
+
+function loadBlacklist() {
+  chrome.storage.sync.get(["blacklistedCreators"], (data) => {
+    blacklistedCreators = data.blacklistedCreators || [];
+    renderBlacklist();
+  });
+}
+
+document.getElementById("clearBlacklistBtn").onclick = () => {
+  if (confirm("Clear blacklist?")) {
+    blacklistedCreators = [];
+    saveBlacklist();
+    renderBlacklist();
+  }
+};
+
+// ---------------------
+// Manage Lists Btn
+// ---------------------
+document.getElementById("manageListBtn").addEventListener("click", () => {
+  chrome.windows.create({
+    url: "public/trustedManager.html",
+    type: "popup",
+    width: 500,
+    height: 600,
+  });
+});
+
+// ---------------------
+// Export/Import Both Lists
+// ---------------------
+document.getElementById("exportBtn").onclick = () => {
+  const data = {
+    trustedCreators,
+    blacklistedCreators,
+  };
+  document.getElementById("importArea").value = JSON.stringify(
+    data,
+    null,
+    2
+  );
+};
+
+document.getElementById("importBtn").onclick = () => {
+  try {
+    const raw = document.getElementById("importArea").value.trim();
+    if (!raw) return;
+    const data = JSON.parse(raw);
+
+    if (Array.isArray(data.trustedCreators)) {
+      trustedCreators = data.trustedCreators;
+      saveTrusted();
+      renderTrusted();
+    }
+    if (Array.isArray(data.blacklistedCreators)) {
+      blacklistedCreators = data.blacklistedCreators;
+      saveBlacklist();
+      renderBlacklist();
+    }
+  } catch (err) {
+    alert("Invalid JSON. Please check and try again.");
+  }
+};
 
 // ---------------------
 // Overlay Settings
@@ -133,20 +199,17 @@ function loadOverlaySettings() {
       "overlayBorderWidth",
     ],
     (data) => {
-      const presetKey = data.overlayPreset || "custom";
-      document.getElementById("overlayPreset").value = presetKey;
+      document.getElementById("overlayPreset").value =
+        data.overlayPreset || "custom";
 
-      // Mode + Colors
       document.getElementById("overlayMode").value = data.overlayMode || "solid";
       document.getElementById("overlayColor").value =
         data.overlayColor || "#000000";
 
-      // Opacity
       const percent = Math.round((data.overlayOpacity ?? 0.9) * 100);
       document.getElementById("overlayOpacity").value = percent;
       document.getElementById("opacityValue").textContent = percent + "%";
 
-      // Gradient
       document.getElementById("overlayGradientStart").value =
         data.overlayGradientStart || "#1DA1F2";
       document.getElementById("overlayGradientEnd").value =
@@ -156,7 +219,6 @@ function loadOverlaySettings() {
       document.getElementById("gradientAngleValue").textContent =
         (data.overlayGradientAngle ?? 135) + "°";
 
-      // Border
       document.getElementById("overlayBorderEnabled").checked =
         data.overlayBorderEnabled !== false;
       document.getElementById("overlayBorderColor").value =
@@ -171,60 +233,6 @@ function loadOverlaySettings() {
   );
 }
 
-// ---------------------
-// Preset Application
-// ---------------------
-function applyPreset(presetKey) {
-  if (presetKey === "custom") return;
-  const preset = overlayPresets[presetKey];
-  if (!preset) return;
-
-  if (preset.mode) document.getElementById("overlayMode").value = preset.mode;
-
-  if (preset.mode === "solid" && preset.color) {
-    document.getElementById("overlayColor").value = preset.color;
-  }
-  if (preset.mode === "gradient") {
-    if (preset.gradientStart)
-      document.getElementById("overlayGradientStart").value =
-        preset.gradientStart;
-    if (preset.gradientEnd)
-      document.getElementById("overlayGradientEnd").value = preset.gradientEnd;
-    if (preset.gradientAngle) {
-      document.getElementById("overlayGradientAngle").value =
-        preset.gradientAngle;
-      document.getElementById("gradientAngleValue").textContent =
-        preset.gradientAngle + "°";
-    }
-  }
-
-  if (preset.opacity !== undefined) {
-    const percent = Math.round(preset.opacity * 100);
-    document.getElementById("overlayOpacity").value = percent;
-    document.getElementById("opacityValue").textContent = percent + "%";
-  }
-
-  if (preset.borderEnabled !== undefined) {
-    document.getElementById("overlayBorderEnabled").checked =
-      preset.borderEnabled;
-  }
-  if (preset.borderColor) {
-    document.getElementById("overlayBorderColor").value = preset.borderColor;
-  }
-  if (preset.borderWidth !== undefined) {
-    document.getElementById("overlayBorderWidth").value = preset.borderWidth;
-    document.getElementById("borderWidthValue").textContent =
-      preset.borderWidth + "px";
-  }
-
-  // Save after applying
-  saveOverlaySettings();
-  toggleModeUI();
-}
-
-// ---------------------
-// UI Wiring
-// ---------------------
 function toggleModeUI() {
   const mode = document.getElementById("overlayMode").value;
   document
@@ -235,7 +243,9 @@ function toggleModeUI() {
     .classList.toggle("hidden", mode !== "gradient");
 }
 
-// Bulk save on any input/change
+// ---------------------
+// Settings Event Binding
+// ---------------------
 [
   "overlayPreset",
   "overlayMode",
@@ -250,35 +260,13 @@ function toggleModeUI() {
 ].forEach((id) => {
   const el = document.getElementById(id);
   if (!el) return;
-  el.addEventListener("input", (e) => {
-    if (id === "overlayPreset") {
-      applyPreset(e.target.value);
-    } else {
-      saveOverlaySettings();
-    }
-  });
-  el.addEventListener("change", (e) => {
-    if (id === "overlayPreset") {
-      applyPreset(e.target.value);
-    } else {
-      saveOverlaySettings();
-    }
-  });
+  el.addEventListener("input", saveOverlaySettings);
+  el.addEventListener("change", saveOverlaySettings);
 });
 
 // ---------------------
 // Init
 // ---------------------
-loadTrustedList();
+loadTrusted();
+loadBlacklist();
 loadOverlaySettings();
-// ---------------------
-// Launch Trusted Manager
-// ---------------------
-document.getElementById("manageListBtn").addEventListener("click", () => {
-  chrome.windows.create({
-    url: "public/trustedManager.html",
-    type: "popup",
-    width: 500,
-    height: 600
-  });
-});
