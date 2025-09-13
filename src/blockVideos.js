@@ -1,11 +1,11 @@
 // blockVideos.js — Don't Show Me Gore
 // -------------------------------------------------
 // Features:
-// - Covers autoplay videos/iframes on X/Twitter with shields until clicked
+// - Shields autoplay videos/iframes on X/Twitter until clicked
 // - Trusted Creators list (synced via chrome.storage.sync)
 // - Blacklisted Creators list: hides posts entirely, replaced with cat pics
 // - Inline Trust/Untrust + Blacklist buttons inside shield overlay
-// - Overlay supports presets (solid/gradient), opacity, border
+// - Overlay supports presets (solid/gradient), opacity, border, blur
 // - Ads remain unshielded (ToS compliant)
 
 // ----------------------
@@ -26,13 +26,15 @@ let overlayBorderEnabled = true;
 let overlayBorderColor = "#FF0000";
 let overlayBorderWidth = 3;
 
+// Blur settings
+let overlayBlurEnabled = false;
+let overlayBlurStrength = 8;
+
 // Local cat pics bundled in /cat
-const catPics = [
-  chrome.runtime.getURL("cat/cat1.jpg"),
-  chrome.runtime.getURL("cat/cat2.jpg"),
-  chrome.runtime.getURL("cat/cat3.jpg"),
-  chrome.runtime.getURL("cat/cat4.jpg"),
-];
+const catPics = [];
+for (let i = 1; i <= 20; i++) {
+  catPics.push(chrome.runtime.getURL(`cat/cat${i}.jpg`));
+}
 
 // Preset map
 const overlayPresets = {
@@ -94,6 +96,8 @@ function loadSettings(callback) {
       overlayBorderEnabled: true,
       overlayBorderColor: "#FF0000",
       overlayBorderWidth: 3,
+      overlayBlurEnabled: false,
+      overlayBlurStrength: 8,
     },
     (data) => {
       trustedCreators = data.trustedCreators || [];
@@ -128,6 +132,9 @@ function loadSettings(callback) {
         overlayBorderColor = data.overlayBorderColor;
         overlayBorderWidth = data.overlayBorderWidth;
       }
+
+      overlayBlurEnabled = data.overlayBlurEnabled || false;
+      overlayBlurStrength = data.overlayBlurStrength ?? 8;
 
       if (callback) callback(data.shieldEnabled);
     }
@@ -168,8 +175,28 @@ function isBlacklisted(tweet) {
 function replaceWithCat(tweet) {
   const img = catPics[Math.floor(Math.random() * catPics.length)];
   tweet.innerHTML = `
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center;color:#fff;">
-      <img src="${img}" style="max-width:100%;border-radius:8px;" />
+    <div style="
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      text-align:center;
+      color:#fff;
+    ">
+      <div style="
+        width:100%;
+        height:220px;
+        overflow:hidden;
+        border-radius:8px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        background:#000;
+      ">
+        <img src="${img}" 
+             style="width:100%; height:100%; object-fit:cover; object-position:center;" />
+      </div>
       <p style="margin-top:8px;font-size:14px;color:#aaa;">
         Post hidden. This creator is blacklisted.<br/>Enjoy a cat instead 🐱
       </p>
@@ -215,6 +242,7 @@ function wrapMediaWithShield(mediaElement) {
     pointer-events:auto;
     padding:20px;
     color:#fff;
+    ${overlayBlurEnabled ? `backdrop-filter: blur(${overlayBlurStrength}px); -webkit-backdrop-filter: blur(${overlayBlurStrength}px);` : ""}
   `;
 
   let actionHtml = "";
@@ -258,7 +286,7 @@ function wrapMediaWithShield(mediaElement) {
   }
 
   if (handle) {
-    // Trust/Untrust toggle
+    // Trust toggle
     const trustBtn = shield.querySelector("#trust-toggle");
     if (trustBtn) {
       trustBtn.addEventListener("click", (e) => {
@@ -322,7 +350,6 @@ function protectMedia() {
     const tweet = vid.closest('[data-testid="tweet"]');
     if (!tweet) return;
 
-    // Blacklist has top priority
     if (isBlacklisted(tweet)) {
       replaceWithCat(tweet);
       vid.dataset.protected = "true";
