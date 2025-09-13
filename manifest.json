@@ -2,22 +2,32 @@
   "manifest_version": 3,
   "name": "Don't Show Me Gore!",
   "version": "1.0.0",
-  "description": "Protect yourself from autoplay gore or unwanted content on X by shielding videos until unlocked.",
+  "description": "Shields autoplay videos on X/Twitter until explicitly unlocked.",
   "permissions": ["storage"],
+  "action": {
+    "default_popup": "public/popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://x.com/*",
+        "*://*.x.com/*",
+        "*://twitter.com/*",
+        "*://*.twitter.com/*"
+      ],
+      "js": ["src/blockVideos.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["public/trustedManager.html"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "icons": {
     "16": "assets/icon16.png",
     "48": "assets/icon48.png",
     "128": "assets/icon128.png"
-  },
-  "action": {
-    "default_popup": "public/popup.html",
-    "default_title": "Don't Show Me Gore!"
-  },
-  "content_scripts": [
-    {
-      "matches": ["*://x.com/*", "*://*.twitter.com/*"],
-      "js": ["src/blockVideos.js"],
-      "run_at": "document_idle"
-    }
-  ]
+  }
 }

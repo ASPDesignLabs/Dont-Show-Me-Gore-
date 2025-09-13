@@ -1,10 +1,19 @@
-// blockVideos.js — Don't Show Me Gore!
-// -------------------------------------
+// blockVideos.js — Don't Show Me Gore
+// -------------------------------------------------
+// Features:
+// - Covers autoplay videos/iframes on X/Twitter with shields until clicked
+// - Trusted Creators list (synced via chrome.storage.sync)
+// - Inline Trust/Untrust toggle in shield overlay
+// - Supports overlay presets (solid/gradient), opacity, border
+// - Ads remain unshielded (ToS compliant)
 
+// ----------------------
+// Globals
+// ----------------------
 let trustedCreators = [];
 let overlayPreset = "custom";
 
-// Overlay vars
+// Overlay settings
 let overlayMode = "solid";
 let overlayColor = "#000000";
 let overlayOpacity = 0.9;
@@ -15,7 +24,7 @@ let overlayBorderEnabled = true;
 let overlayBorderColor = "#FF0000";
 let overlayBorderWidth = 3;
 
-// Presets map
+// Preset map
 const overlayPresets = {
   twitterDark: {
     mode: "solid",
@@ -57,7 +66,7 @@ const overlayPresets = {
 };
 
 // ----------------------
-// Settings load/save
+// Settings Loader
 // ----------------------
 function loadSettings(callback) {
   chrome.storage.sync.get(
@@ -176,16 +185,30 @@ function wrapMediaWithShield(mediaElement) {
     color:#fff;
   `;
 
+  // Trust toggle button
+  let trustHtml = "";
+  if (handle) {
+    trustHtml = `
+      <div id="trust-toggle"
+           style="margin-top:12px; padding:4px 10px; border-radius:4px;
+                  font-size:12px; font-weight:bold;
+                  background:${isTrusted ? "#059669" : "#dc2626"};
+                  color:#fff; cursor:pointer; display:inline-block">
+        ${isTrusted ? "Trusted" : "+ Trust"} ${handle}
+      </div>`;
+  }
+
   shield.innerHTML = `
     <div style="font-size:22px; margin-bottom:8px;">🛡️</div>
     <div style="font-size:14px; margin-bottom:6px;">Protected by Don't Show Me Gore!</div>
     <div style="font-size:12px; color:#aaa;">Click shield to unlock</div>
+    ${trustHtml}
   `;
 
   container.appendChild(shield);
   mediaElement.pause?.();
 
-  shield.addEventListener("click", () => {
+  function unlockAndRemove() {
     shield.style.transition = "opacity 0.25s ease";
     shield.style.opacity = "0";
     setTimeout(() => {
@@ -193,11 +216,36 @@ function wrapMediaWithShield(mediaElement) {
       mediaElement.muted = true;
       mediaElement.play?.().catch(() => {});
     }, 250);
+  }
+
+  // Trust/untrust toggle
+  if (handle) {
+    const btn = shield.querySelector("#trust-toggle");
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+
+      if (trustedCreators.includes(handle)) {
+        trustedCreators = trustedCreators.filter((h) => h !== handle);
+      } else {
+        trustedCreators.push(handle);
+      }
+
+      chrome.storage.sync.set({ trustedCreators });
+      unlockAndRemove();
+    });
+  }
+
+  // Unlock by clicking shield background
+  shield.addEventListener("click", (e) => {
+    if (e.target.id !== "trust-toggle") {
+      unlockAndRemove();
+    }
   });
 }
 
 // ----------------------
-// Filters + Protection
+// Detection Filters
 // ----------------------
 function isTrusted(mediaElement) {
   const tweet = mediaElement.closest('[data-testid="tweet"]');
@@ -213,12 +261,25 @@ function isAdElement(mediaElement) {
   );
 }
 
+// ----------------------
+// Protect Videos & Frames
+// ----------------------
 function protectMedia() {
   document.querySelectorAll("video:not([data-protected])").forEach((vid) => {
     if (isAdElement(vid) || isTrusted(vid)) {
       vid.dataset.protected = "true";
     } else {
       wrapMediaWithShield(vid);
+    }
+  });
+
+  document.querySelectorAll("iframe:not([data-protected])").forEach((frame) => {
+    if (frame.src.includes("twitter.com") || frame.src.includes("x.com")) {
+      if (isAdElement(frame) || isTrusted(frame)) {
+        frame.dataset.protected = "true";
+      } else {
+        wrapMediaWithShield(frame);
+      }
     }
   });
 }

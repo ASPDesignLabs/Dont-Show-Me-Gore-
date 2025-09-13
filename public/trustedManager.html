@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Trusted Creators</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-black text-gray-100 min-h-screen flex flex-col">
+    <header class="p-4 border-b border-neutral-800">
+      <h1 class="text-xl font-bold">Trusted Creators</h1>
+      <p class="text-sm text-gray-400">Manage who can bypass shields</p>
+    </header>
+
+    <main class="flex-1 p-4 space-y-4">
+      <!-- Add -->
+      <div class="flex space-x-2">
+        <input
+          id="handleInput"
+          type="text"
+          placeholder="@handle"
+          class="flex-1 bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-700"
+        />
+        <button
+          id="addHandleBtn"
+          class="bg-neutral-800 hover:bg-neutral-700 px-4 py-2 rounded text-sm font-semibold"
+        >
+          Add
+        </button>
+      </div>
+
+      <!-- Search -->
+      <input
+        id="filterBox"
+        type="text"
+        placeholder="Search"
+        class="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-700"
+      />
+
+      <!-- Clear All -->
+      <div class="text-right">
+        <button
+          id="clearAllBtn"
+          class="text-sm text-red-500 hover:text-red-400 font-semibold"
+        >
+          Clear All
+        </button>
+      </div>
+
+      <!-- Trusted list -->
+      <div
+        id="trustedListContainer"
+        class="rounded-lg border border-neutral-800 divide-y divide-neutral-800 overflow-hidden"
+      ></div>
+    </main>
+    <script src="trustedManager.js"></script>
+  </body>
+</html>

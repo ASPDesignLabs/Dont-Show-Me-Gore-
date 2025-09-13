@@ -271,3 +271,14 @@ function toggleModeUI() {
 // ---------------------
 loadTrustedList();
 loadOverlaySettings();
+// ---------------------
+// Launch Trusted Manager
+// ---------------------
+document.getElementById("manageListBtn").addEventListener("click", () => {
+  chrome.windows.create({
+    url: "public/trustedManager.html",
+    type: "popup",
+    width: 500,
+    height: 600
+  });
+});
