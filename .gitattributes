@@ -1,0 +1,2 @@
+# Ensure consistent LF endings for everything text-y
+* text=auto eol=lf
