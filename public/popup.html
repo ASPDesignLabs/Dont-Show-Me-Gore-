@@ -201,6 +201,26 @@
       <span id="borderWidthValue" class="ml-2 text-sm">3px</span>
     </div>
 
+    <!-- Blur Shield -->
+    <h2 class="text-lg font-bold mb-2 text-sky-400">Blur Shield</h2>
+    <div class="mb-4">
+      <div class="flex items-center space-x-2 mb-2">
+        <input type="checkbox" id="overlayBlurEnabled" />
+        <label for="overlayBlurEnabled" class="text-sm">Enable Blur</label>
+      </div>
+
+      <label class="block text-sm mb-1">Blur Strength</label>
+      <input
+        type="range"
+        id="overlayBlurStrength"
+        min="1"
+        max="20"
+        value="8"
+        class="w-full"
+      />
+      <span id="blurStrengthValue" class="ml-2 text-sm">8px</span>
+    </div>
+
     <script src="popup.js"></script>
   </body>
 </html>
