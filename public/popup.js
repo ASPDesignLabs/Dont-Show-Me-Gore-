@@ -128,11 +128,7 @@ document.getElementById("exportBtn").onclick = () => {
     trustedCreators,
     blacklistedCreators,
   };
-  document.getElementById("importArea").value = JSON.stringify(
-    data,
-    null,
-    2
-  );
+  document.getElementById("importArea").value = JSON.stringify(data, null, 2);
 };
 
 document.getElementById("importBtn").onclick = () => {
@@ -179,6 +175,12 @@ function saveOverlaySettings() {
       document.getElementById("overlayBorderWidth").value,
       10
     ),
+    // NEW Blur
+    overlayBlurEnabled: document.getElementById("overlayBlurEnabled").checked,
+    overlayBlurStrength: parseInt(
+      document.getElementById("overlayBlurStrength").value,
+      10
+    ),
   };
 
   chrome.storage.sync.set(data);
@@ -197,6 +199,8 @@ function loadOverlaySettings() {
       "overlayBorderEnabled",
       "overlayBorderColor",
       "overlayBorderWidth",
+      "overlayBlurEnabled", // NEW
+      "overlayBlurStrength", // NEW
     ],
     (data) => {
       document.getElementById("overlayPreset").value =
@@ -227,6 +231,14 @@ function loadOverlaySettings() {
         data.overlayBorderWidth ?? 3;
       document.getElementById("borderWidthValue").textContent =
         (data.overlayBorderWidth ?? 3) + "px";
+
+      // NEW blur
+      document.getElementById("overlayBlurEnabled").checked =
+        data.overlayBlurEnabled || false;
+      document.getElementById("overlayBlurStrength").value =
+        data.overlayBlurStrength ?? 8;
+      document.getElementById("blurStrengthValue").textContent =
+        (data.overlayBlurStrength ?? 8) + "px";
 
       toggleModeUI();
     }
@@ -263,6 +275,14 @@ function toggleModeUI() {
   el.addEventListener("input", saveOverlaySettings);
   el.addEventListener("change", saveOverlaySettings);
 });
+
+// NEW Blur listeners
+document.getElementById("overlayBlurEnabled").onchange = saveOverlaySettings;
+document.getElementById("overlayBlurStrength").oninput = (e) => {
+  document.getElementById("blurStrengthValue").textContent =
+    e.target.value + "px";
+  saveOverlaySettings();
+};
 
 // ---------------------
 // Init
