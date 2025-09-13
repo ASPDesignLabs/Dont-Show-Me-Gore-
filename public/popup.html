@@ -13,42 +13,159 @@
     <!-- Enable toggle -->
     <div class="flex items-center justify-between mb-4">
       <label for="enableToggle">Enable Shields</label>
-      <input type="checkbox" id="enableToggle"
-        class="w-5 h-5 text-sky-500 border-gray-500 rounded"/>
+      <input
+        type="checkbox"
+        id="enableToggle"
+        class="w-5 h-5 text-sky-500 border-gray-500 rounded"
+      />
     </div>
 
     <!-- Add handle -->
     <div class="flex space-x-2 mb-4">
-      <input id="newHandle" type="text" placeholder="@handle"
-        class="flex-1 bg-[#253341] border border-gray-600 rounded px-2 py-1 text-sm"/>
-      <button id="addBtn"
-        class="bg-sky-500 hover:bg-sky-600 px-3 py-1 rounded text-sm font-bold">
+      <input
+        id="newHandle"
+        type="text"
+        placeholder="@handle"
+        class="flex-1 bg-[#253341] border border-gray-600 rounded px-2 py-1 text-sm"
+      />
+      <button
+        id="addBtn"
+        class="bg-sky-500 hover:bg-sky-600 px-3 py-1 rounded text-sm font-bold"
+      >
         Add
       </button>
     </div>
 
     <!-- Trusted list -->
-    <div id="trustedList"
-      class="max-h-40 overflow-y-auto bg-[#192734] rounded border border-gray-700 mb-4">
-      <!-- Handles render here -->
-    </div>
+    <div
+      id="trustedList"
+      class="max-h-40 overflow-y-auto bg-[#192734] rounded border border-gray-700 mb-4"
+    ></div>
 
     <!-- Export / Import buttons -->
     <div class="flex space-x-2 mb-2">
-      <button id="exportBtn"
-        class="flex-1 bg-sky-500 hover:bg-sky-600 px-3 py-1 rounded text-sm font-bold">
+      <button
+        id="exportBtn"
+        class="flex-1 bg-sky-500 hover:bg-sky-600 px-3 py-1 rounded text-sm font-bold"
+      >
         Export
       </button>
-      <button id="importBtn"
-        class="flex-1 bg-emerald-500 hover:bg-emerald-600 px-3 py-1 rounded text-sm font-bold">
+      <button
+        id="importBtn"
+        class="flex-1 bg-emerald-500 hover:bg-emerald-600 px-3 py-1 rounded text-sm font-bold"
+      >
         Import
       </button>
     </div>
 
     <!-- JSON area -->
-    <textarea id="importArea"
-      class="w-full h-20 bg-[#253341] border border-gray-600 rounded px-2 py-1 text-xs"
-      placeholder="Export JSON here or paste to import..."></textarea>
+    <textarea
+      id="importArea"
+      class="w-full h-20 bg-[#253341] border border-gray-600 rounded px-2 py-1 text-xs mb-4"
+      placeholder="Export JSON here or paste to import..."
+    ></textarea>
+
+    <!-- Overlay Appearance Settings -->
+    <h2 class="text-lg font-bold mb-2 text-sky-400">Overlay Appearance</h2>
+
+    <!-- Preset Selector -->
+    <div class="mb-4">
+      <label class="block text-sm mb-1">Overlay Preset</label>
+      <select
+        id="overlayPreset"
+        class="w-full bg-[#253341] border border-gray-600 rounded px-1 py-1 text-sm"
+      >
+        <option value="custom">Custom</option>
+        <option value="twitterDark">Twitter Dark</option>
+        <option value="twitterLight">Twitter Light</option>
+        <option value="skyGradient">Sky → Dark Blue</option>
+        <option value="sunrise">Sunrise Fade</option>
+        <option value="emerald">Emerald Fade</option>
+      </select>
+    </div>
+
+    <!-- Mode selector -->
+    <div class="mb-4">
+      <label class="block text-sm mb-1">Overlay Type</label>
+      <select
+        id="overlayMode"
+        class="w-full bg-[#253341] border border-gray-600 rounded px-1 py-1 text-sm"
+      >
+        <option value="solid">Solid</option>
+        <option value="gradient">Gradient</option>
+      </select>
+    </div>
+
+    <!-- Solid Color -->
+    <div id="solidColorControls" class="mb-4">
+      <label class="block text-sm mb-1">Overlay Color</label>
+      <input
+        type="color"
+        id="overlayColor"
+        class="w-10 h-8 p-0 border-none rounded bg-transparent"
+      />
+    </div>
+
+    <!-- Gradient Controls -->
+    <div id="gradientControls" class="hidden mb-4">
+      <label class="block text-sm mb-1">Gradient Start</label>
+      <input
+        type="color"
+        id="overlayGradientStart"
+        class="w-10 h-8 border-none rounded"
+      />
+
+      <label class="block text-sm mt-2">Gradient End</label>
+      <input
+        type="color"
+        id="overlayGradientEnd"
+        class="w-10 h-8 border-none rounded"
+      />
+
+      <label class="block text-sm mt-2">Angle</label>
+      <input
+        type="range"
+        id="overlayGradientAngle"
+        min="0"
+        max="360"
+        value="135"
+      />
+      <span id="gradientAngleValue" class="ml-2 text-sm">135°</span>
+    </div>
+
+    <!-- Opacity -->
+    <div class="mb-4">
+      <label class="block text-sm mb-1">Overlay Opacity</label>
+      <input
+        type="range"
+        id="overlayOpacity"
+        min="10"
+        max="100"
+        value="90"
+        class="w-full"
+      />
+      <span id="opacityValue" class="ml-2 text-sm">90%</span>
+    </div>
+
+    <!-- Border -->
+    <h2 class="text-lg font-bold mb-2 text-sky-400">Overlay Border</h2>
+    <div class="mb-4">
+      <div class="flex items-center space-x-2 mb-2">
+        <input type="checkbox" id="overlayBorderEnabled" checked />
+        <label for="overlayBorderEnabled" class="text-sm">Enable Border</label>
+      </div>
+
+      <label class="block text-sm mb-1">Border Color</label>
+      <input
+        type="color"
+        id="overlayBorderColor"
+        class="w-10 h-8 border-none rounded"
+      />
+
+      <label class="block text-sm mt-2">Border Thickness</label>
+      <input type="range" id="overlayBorderWidth" min="0" max="10" value="3" />
+      <span id="borderWidthValue" class="ml-2 text-sm">3px</span>
+    </div>
 
     <script src="popup.js"></script>
   </body>
