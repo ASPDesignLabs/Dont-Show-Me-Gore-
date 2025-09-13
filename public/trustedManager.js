@@ -1,5 +1,5 @@
 let trustedCreators = [];
-let sortMode = "alpha"; // 'alpha' or 'recent'
+let sortMode = "alpha"; // "alpha" = alphabetical, "recent" = most recent first
 
 function loadTrusted() {
   chrome.storage.sync.get(["trustedCreators"], (data) => {
@@ -18,8 +18,11 @@ function renderList() {
   container.innerHTML = "";
 
   let list = [...trustedCreators];
-  if (sortMode === "alpha") list.sort((a, b) => a.localeCompare(b));
-  else list = list.reverse();
+  if (sortMode === "alpha") {
+    list.sort((a, b) => a.localeCompare(b));
+  } else {
+    list = list.slice().reverse(); // most recent entries appear first
+  }
 
   list
     .filter((h) => h.toLowerCase().includes(filter))
@@ -28,7 +31,7 @@ function renderList() {
       row.className =
         "flex items-center justify-between px-3 py-2 bg-black hover:bg-neutral-900";
 
-      // Inline editable
+      // Inline editable field
       const input = document.createElement("input");
       input.value = handle;
       input.className =
@@ -49,7 +52,7 @@ function renderList() {
         renderList();
       };
 
-      // Keyboard: delete row
+      // Keyboard shortcut: Delete to remove
       input.addEventListener("keydown", (e) => {
         if (e.key === "Delete") {
           trustedCreators = trustedCreators.filter((h) => h !== handle);
@@ -63,7 +66,7 @@ function renderList() {
     });
 }
 
-// Add
+// Add new handle
 document.getElementById("addHandleBtn").onclick = () => {
   const val = document.getElementById("handleInput").value.trim();
   if (!val) return;
@@ -73,21 +76,32 @@ document.getElementById("addHandleBtn").onclick = () => {
   renderList();
 };
 
-// Enter shortcut for add
+// Add on Enter
 document.getElementById("handleInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter") document.getElementById("addHandleBtn").click();
 });
 
-// Search
+// Search filter
 document.getElementById("filterBox").oninput = () => renderList();
 
-// Clear All
+// Clear All button
 document.getElementById("clearAllBtn").onclick = () => {
   if (confirm("Clear all trusted creators?")) {
     trustedCreators = [];
     saveTrusted();
     renderList();
   }
+};
+
+// Sort toggle buttons
+document.getElementById("sortAlphaBtn").onclick = () => {
+  sortMode = "alpha";
+  renderList();
+};
+
+document.getElementById("sortRecentBtn").onclick = () => {
+  sortMode = "recent";
+  renderList();
 };
 
 loadTrusted();
