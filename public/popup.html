@@ -36,7 +36,7 @@
       </button>
     </div>
 
-    <!-- Trusted list -->
+    <!-- Trusted Creators -->
     <h2 class="text-lg font-bold text-sky-400 mb-1">Trusted Creators</h2>
     <div
       id="trustedList"
@@ -51,7 +51,7 @@
       </button>
     </div>
 
-    <!-- Blacklist -->
+    <!-- Blacklisted Creators -->
     <h2 class="text-lg font-bold text-red-400 mb-1">Blacklisted Creators</h2>
     <div
       id="blacklistList"
@@ -148,14 +148,12 @@
         id="overlayGradientStart"
         class="w-10 h-8 border-none rounded"
       />
-
       <label class="block text-sm mt-2">Gradient End</label>
       <input
         type="color"
         id="overlayGradientEnd"
         class="w-10 h-8 border-none rounded"
       />
-
       <label class="block text-sm mt-2">Angle</label>
       <input
         type="range"
@@ -188,14 +186,12 @@
         <input type="checkbox" id="overlayBorderEnabled" checked />
         <label for="overlayBorderEnabled" class="text-sm">Enable Border</label>
       </div>
-
       <label class="block text-sm mb-1">Border Color</label>
       <input
         type="color"
         id="overlayBorderColor"
         class="w-10 h-8 border-none rounded"
       />
-
       <label class="block text-sm mt-2">Border Thickness</label>
       <input type="range" id="overlayBorderWidth" min="0" max="10" value="3" />
       <span id="borderWidthValue" class="ml-2 text-sm">3px</span>
@@ -208,7 +204,6 @@
         <input type="checkbox" id="overlayBlurEnabled" />
         <label for="overlayBlurEnabled" class="text-sm">Enable Blur</label>
       </div>
-
       <label class="block text-sm mb-1">Blur Strength</label>
       <input
         type="range"
@@ -219,6 +214,26 @@
         class="w-full"
       />
       <span id="blurStrengthValue" class="ml-2 text-sm">8px</span>
+    </div>
+
+    <!-- Cat Replacement -->
+    <h2 class="text-lg font-bold mb-2 text-sky-400">Cat Replacement</h2>
+    <div class="mb-4">
+      <label class="block text-sm mb-1">
+        Number of Cat Images in /cat/ (1 – 200)
+      </label>
+      <input
+        type="number"
+        id="catImageCount"
+        min="1"
+        max="200"
+        value="20"
+        class="w-full bg-[#253341] border border-gray-600 rounded px-2 py-1 text-sm"
+      />
+      <p class="text-xs text-gray-400 mt-1">
+        Default: 20. Increase if you've added more images into the
+        <code>/cat/</code> directory (supports up to 200).
+      </p>
     </div>
 
     <script src="popup.js"></script>

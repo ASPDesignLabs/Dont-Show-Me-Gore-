@@ -2,11 +2,13 @@
 // -------------------------------------------------
 // Features:
 // - Shields autoplay videos/iframes on X/Twitter until clicked
-// - Trusted Creators list (synced via chrome.storage.sync)
-// - Blacklisted Creators list: hides posts entirely, replaced with cat pics
-// - Inline Trust/Untrust + Blacklist buttons inside shield overlay
+// - Trusted Creators: posts/videos always visible
+// - Blacklisted Creators: posts/videos replaced with cat pics
+// - Inline Trust / Blacklist buttons injected on neutral tweets
+// - Buttons disappear after trust/blacklist
 // - Overlay supports presets (solid/gradient), opacity, border, blur
-// - Ads remain unshielded (ToS compliant)
+// - Cat pic pool configurable (1–200 images in /cat/)
+// - 🚫 Ads are never modified (ToS compliance)
 
 // ----------------------
 // Globals
@@ -15,7 +17,6 @@ let trustedCreators = [];
 let blacklistedCreators = [];
 let overlayPreset = "custom";
 
-// Overlay settings
 let overlayMode = "solid";
 let overlayColor = "#000000";
 let overlayOpacity = 0.9;
@@ -26,56 +27,71 @@ let overlayBorderEnabled = true;
 let overlayBorderColor = "#FF0000";
 let overlayBorderWidth = 3;
 
-// Blur settings
 let overlayBlurEnabled = false;
 let overlayBlurStrength = 8;
 
-// Local cat pics bundled in /cat
-const catPics = [];
-for (let i = 1; i <= 20; i++) {
-  catPics.push(chrome.runtime.getURL(`cat/cat${i}.jpg`));
-}
+let catImageCount = 20;
+let catPics = [];
 
-// Preset map
+// ----------------------
+// Presets
+// ----------------------
 const overlayPresets = {
-  twitterDark: {
-    mode: "solid",
-    color: "#000000",
-    opacity: 0.9,
-    borderEnabled: true,
-    borderColor: "#FFFFFF",
-    borderWidth: 2,
-  },
-  twitterLight: {
-    mode: "solid",
-    color: "#FFFFFF",
-    opacity: 0.9,
-    borderEnabled: true,
-    borderColor: "#000000",
-    borderWidth: 2,
-  },
-  skyGradient: {
-    mode: "gradient",
-    gradientStart: "#1DA1F2",
-    gradientEnd: "#15202B",
-    gradientAngle: 135,
-    opacity: 0.9,
-  },
-  sunrise: {
-    mode: "gradient",
-    gradientStart: "#FF9A9E",
-    gradientEnd: "#FAD0C4",
-    gradientAngle: 45,
-    opacity: 0.9,
-  },
-  emerald: {
-    mode: "gradient",
-    gradientStart: "#10B981",
-    gradientEnd: "#064E3B",
-    gradientAngle: 135,
-    opacity: 0.9,
-  },
+  twitterDark: { mode: "solid", color: "#000000", opacity: 0.9, borderEnabled: true, borderColor: "#FFFFFF", borderWidth: 2 },
+  twitterLight: { mode: "solid", color: "#FFFFFF", opacity: 0.9, borderEnabled: true, borderColor: "#000000", borderWidth: 2 },
+  skyGradient: { mode: "gradient", gradientStart: "#1DA1F2", gradientEnd: "#15202B", gradientAngle: 135, opacity: 0.9 },
+  sunrise: { mode: "gradient", gradientStart: "#FF9A9E", gradientEnd: "#FAD0C4", gradientAngle: 45, opacity: 0.9 },
+  emerald: { mode: "gradient", gradientStart: "#10B981", gradientEnd: "#064E3B", gradientAngle: 135, opacity: 0.9 },
 };
+
+// ----------------------
+// Helpers
+// ----------------------
+function buildCatPicArray() {
+  const arr = [];
+  const count = Math.min(Math.max(catImageCount, 1), 200);
+  for (let i = 1; i <= count; i++) {
+    arr.push(chrome.runtime.getURL(`cat/cat${i}.jpg`));
+  }
+  return arr;
+}
+function getTweetHandle(tweet) {
+  const link = tweet && tweet.querySelector('a[href^="/"][role="link"]');
+  if (link) return "@" + link.getAttribute("href").replace("/", "");
+  return null;
+}
+function rgbaFromHex(hex, opacity) {
+  const r = parseInt(hex.substr(1, 2), 16);
+  const g = parseInt(hex.substr(3, 2), 16);
+  const b = parseInt(hex.substr(5, 2), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+function buildOverlayBackground() {
+  if (overlayMode === "gradient") {
+    return `linear-gradient(${overlayGradientAngle}deg, ${overlayGradientStart}, ${overlayGradientEnd})`;
+  }
+  return rgbaFromHex(overlayColor, overlayOpacity);
+}
+function pickTextColorForBackground(hex) {
+  if (!hex || hex.length < 7) return "#FFFFFF";
+  const r = parseInt(hex.substr(1, 2), 16);
+  const g = parseInt(hex.substr(3, 2), 16);
+  const b = parseInt(hex.substr(5, 2), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.65 ? "#000000" : "#FFFFFF";
+}
+function buildButtonStyle(baseColor) {
+  const textColor = pickTextColorForBackground(baseColor);
+  return `
+    background:${baseColor};
+    color:${textColor};
+    border:${overlayBorderWidth}px solid ${overlayBorderColor};
+    padding:2px 6px;
+    border-radius:4px;
+    font-size:11px;
+    cursor:pointer;
+  `;
+}
 
 // ----------------------
 // Settings Loader
@@ -98,118 +114,112 @@ function loadSettings(callback) {
       overlayBorderWidth: 3,
       overlayBlurEnabled: false,
       overlayBlurStrength: 8,
+      catImageCount: 20,
     },
     (data) => {
       trustedCreators = data.trustedCreators || [];
       blacklistedCreators = data.blacklistedCreators || [];
       overlayPreset = data.overlayPreset || "custom";
-
-      if (overlayPreset !== "custom" && overlayPresets[overlayPreset]) {
-        const preset = overlayPresets[overlayPreset];
-        overlayMode = preset.mode || overlayMode;
-        overlayColor = preset.color || overlayColor;
-        overlayOpacity = preset.opacity || overlayOpacity;
-        overlayGradientStart = preset.gradientStart || overlayGradientStart;
-        overlayGradientEnd = preset.gradientEnd || overlayGradientEnd;
-        overlayGradientAngle = preset.gradientAngle || overlayGradientAngle;
-        overlayBorderEnabled =
-          preset.borderEnabled !== undefined
-            ? preset.borderEnabled
-            : overlayBorderEnabled;
-        overlayBorderColor = preset.borderColor || overlayBorderColor;
-        overlayBorderWidth =
-          preset.borderWidth !== undefined
-            ? preset.borderWidth
-            : overlayBorderWidth;
-      } else {
-        overlayMode = data.overlayMode;
-        overlayColor = data.overlayColor;
-        overlayOpacity = data.overlayOpacity;
-        overlayGradientStart = data.overlayGradientStart;
-        overlayGradientEnd = data.overlayGradientEnd;
-        overlayGradientAngle = data.overlayGradientAngle;
-        overlayBorderEnabled = data.overlayBorderEnabled;
-        overlayBorderColor = data.overlayBorderColor;
-        overlayBorderWidth = data.overlayBorderWidth;
-      }
-
+      overlayMode = data.overlayMode;
+      overlayColor = data.overlayColor;
+      overlayOpacity = data.overlayOpacity;
+      overlayGradientStart = data.overlayGradientStart;
+      overlayGradientEnd = data.overlayGradientEnd;
+      overlayGradientAngle = data.overlayGradientAngle;
+      overlayBorderEnabled = data.overlayBorderEnabled;
+      overlayBorderColor = data.overlayBorderColor;
+      overlayBorderWidth = data.overlayBorderWidth;
       overlayBlurEnabled = data.overlayBlurEnabled || false;
       overlayBlurStrength = data.overlayBlurStrength ?? 8;
-
+      catImageCount = data.catImageCount ?? 20;
+      catPics = buildCatPicArray();
       if (callback) callback(data.shieldEnabled);
     }
   );
 }
 
 // ----------------------
-// Helpers
+// Blacklist Replace
 // ----------------------
-function getTweetHandle(tweet) {
-  const link = tweet && tweet.querySelector('a[href^="/"][role="link"]');
-  if (link) return "@" + link.getAttribute("href").replace("/", "");
-  return null;
-}
-
-function rgbaFromHex(hex, opacity) {
-  const r = parseInt(hex.substring(1, 3), 16);
-  const g = parseInt(hex.substring(3, 5), 16);
-  const b = parseInt(hex.substring(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-}
-
-function buildOverlayBackground() {
-  if (overlayMode === "gradient") {
-    return `linear-gradient(${overlayGradientAngle}deg, ${overlayGradientStart}, ${overlayGradientEnd})`;
-  }
-  return rgbaFromHex(overlayColor, overlayOpacity);
-}
-
-// ----------------------
-// Blacklist Logic
-// ----------------------
-function isBlacklisted(tweet) {
-  const handle = getTweetHandle(tweet);
-  return handle && blacklistedCreators.includes(handle);
-}
-
-function replaceWithCat(tweet) {
+function replaceWithCat(tweet, handle) {
+  if (!catPics.length) catPics = buildCatPicArray();
   const img = catPics[Math.floor(Math.random() * catPics.length)];
   tweet.innerHTML = `
-    <div style="
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      padding:16px;
-      text-align:center;
-      color:#fff;
-    ">
-      <div style="
-        width:100%;
-        height:220px;
-        overflow:hidden;
-        border-radius:8px;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        background:#000;
-      ">
-        <img src="${img}" 
-             style="width:100%; height:100%; object-fit:cover; object-position:center;" />
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center;color:#fff;">
+      <div style="width:100%;height:220px;overflow:hidden;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#000;">
+        <img src="${img}" style="width:100%; height:100%; object-fit:cover; object-position:center;" />
       </div>
       <p style="margin-top:8px;font-size:14px;color:#aaa;">
-        Post hidden. This creator is blacklisted.<br/>Enjoy a cat instead 🐱
+        All posts from <strong>${handle}</strong> are hidden.<br/>
+        You flagged this creator. Enjoy a cat instead 🐱
       </p>
     </div>
   `;
 }
 
 // ----------------------
-// Shield Overlay Renderer
+// Tweet Controls
+// ----------------------
+function injectTweetControls(tweet, handle) {
+  if (!handle) return;
+  if (tweet.querySelector(".dsg-controls")) return;
+  if (isAdElement(tweet)) return; // 🚫 do not modify ads
+  if (trustedCreators.includes(handle) || blacklistedCreators.includes(handle)) {
+    return;
+  }
+
+  const baseFill = overlayMode === "gradient" ? overlayGradientStart : overlayColor;
+
+  const bar = document.createElement("div");
+  bar.className = "dsg-controls";
+  bar.style.cssText = `
+    position:absolute; top:4px; right:4px;
+    display:flex; gap:5px; z-index:100000;
+  `;
+
+  const trustBtn = document.createElement("button");
+  trustBtn.textContent = "Trust";
+  trustBtn.style.cssText = buildButtonStyle(baseFill);
+
+  const blacklistBtn = document.createElement("button");
+  blacklistBtn.textContent = "🚫";
+  blacklistBtn.style.cssText = buildButtonStyle(baseFill);
+
+  trustBtn.onclick = (e) => {
+    e.stopPropagation();
+    trustedCreators.push(handle);
+    chrome.storage.sync.set({ trustedCreators });
+    bar.remove();
+  };
+
+  blacklistBtn.onclick = (e) => {
+    e.stopPropagation();
+    blacklistedCreators.push(handle);
+    chrome.storage.sync.set({ blacklistedCreators });
+    replaceWithCat(tweet, handle);
+  };
+
+  bar.appendChild(trustBtn);
+  bar.appendChild(blacklistBtn);
+  tweet.style.position = "relative";
+  tweet.appendChild(bar);
+}
+
+// ----------------------
+// Video Shield
 // ----------------------
 function wrapMediaWithShield(mediaElement) {
   if (mediaElement.dataset.protected === "true") return;
   mediaElement.dataset.protected = "true";
+
+  const tweet = mediaElement.closest('[data-testid="tweet"]');
+  const handle = tweet ? getTweetHandle(tweet) : null;
+
+  if (isAdElement(tweet)) {
+    mediaElement.dataset.protected = "true"; // 🚫 leave ads untouched
+    return;
+  }
+  if (handle && trustedCreators.includes(handle)) return;
 
   const container = mediaElement.parentElement;
   if (!container) return;
@@ -217,16 +227,12 @@ function wrapMediaWithShield(mediaElement) {
     container.style.position = "relative";
   }
 
-  const tweet = mediaElement.closest('[data-testid="tweet"]');
-  const handle = tweet ? getTweetHandle(tweet) : null;
-  const isTrustedAcc = handle && trustedCreators.includes(handle);
-
-  const shield = document.createElement("div");
   const background = buildOverlayBackground();
   const borderStyle = overlayBorderEnabled
     ? `${overlayBorderWidth}px solid ${overlayBorderColor}`
     : "none";
 
+  const shield = document.createElement("div");
   shield.style.cssText = `
     position:absolute; inset:0;
     background:${background};
@@ -242,26 +248,23 @@ function wrapMediaWithShield(mediaElement) {
     pointer-events:auto;
     padding:20px;
     color:#fff;
-    ${overlayBlurEnabled ? `backdrop-filter: blur(${overlayBlurStrength}px); -webkit-backdrop-filter: blur(${overlayBlurStrength}px);` : ""}
+    ${overlayBlurEnabled ? 
+      `backdrop-filter: blur(${overlayBlurStrength}px); -webkit-backdrop-filter: blur(${overlayBlurStrength}px);` 
+      : ""}
   `;
 
+  const baseFill = overlayMode === "gradient" ? overlayGradientStart : overlayColor;
+
   let actionHtml = "";
-  if (handle) {
+  if (handle && !trustedCreators.includes(handle) && !blacklistedCreators.includes(handle)) {
     actionHtml = `
       <div style="margin-top:12px; display:flex; flex-direction:column; gap:6px;">
-        <div id="trust-toggle"
-             style="padding:4px 10px; border-radius:4px;
-                    font-size:12px; font-weight:bold;
-                    background:${isTrustedAcc ? "#059669" : "#dc2626"};
-                    color:#fff; cursor:pointer; text-align:center;">
-          ${isTrustedAcc ? "Trusted" : "+ Trust"} ${handle}
-        </div>
-        <div id="blacklist-toggle"
-             style="padding:4px 10px; border-radius:4px;
-                    font-size:12px; font-weight:bold;
-                    background:#6d28d9; color:#fff; cursor:pointer; text-align:center;">
+        <button id="trust-toggle" style="${buildButtonStyle(baseFill)}">
+          + Trust ${handle}
+        </button>
+        <button id="blacklist-toggle" style="${buildButtonStyle(baseFill)}">
           🚫 Blacklist ${handle}
-        </div>
+        </button>
       </div>`;
   }
 
@@ -286,38 +289,27 @@ function wrapMediaWithShield(mediaElement) {
   }
 
   if (handle) {
-    // Trust toggle
     const trustBtn = shield.querySelector("#trust-toggle");
+    const blacklistBtn = shield.querySelector("#blacklist-toggle");
+
     if (trustBtn) {
       trustBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        if (trustedCreators.includes(handle)) {
-          trustedCreators = trustedCreators.filter((h) => h !== handle);
-        } else {
-          trustedCreators.push(handle);
-        }
+        e.stopPropagation(); e.preventDefault();
+        trustedCreators.push(handle);
         chrome.storage.sync.set({ trustedCreators });
         unlockAndRemove();
       });
     }
-
-    // Blacklist toggle
-    const blacklistBtn = shield.querySelector("#blacklist-toggle");
     if (blacklistBtn) {
       blacklistBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        if (!blacklistedCreators.includes(handle)) {
-          blacklistedCreators.push(handle);
-          chrome.storage.sync.set({ blacklistedCreators });
-          replaceWithCat(tweet);
-        }
+        e.stopPropagation(); e.preventDefault();
+        blacklistedCreators.push(handle);
+        chrome.storage.sync.set({ blacklistedCreators });
+        replaceWithCat(tweet, handle);
       });
     }
   }
 
-  // Normal unlock
   shield.addEventListener("click", (e) => {
     if (e.target.id !== "trust-toggle" && e.target.id !== "blacklist-toggle") {
       unlockAndRemove();
@@ -326,16 +318,38 @@ function wrapMediaWithShield(mediaElement) {
 }
 
 // ----------------------
-// Detection Filters
+// Tweet Scan
 // ----------------------
-function isTrusted(mediaElement) {
-  const tweet = mediaElement.closest('[data-testid="tweet"]');
+function checkTweets() {
+  document
+    .querySelectorAll('[data-testid="tweet"]:not([data-protected])')
+    .forEach((tweet) => {
+      const handle = getTweetHandle(tweet);
+      if (!handle) return;
+      tweet.dataset.protected = "true";
+
+      if (isAdElement(tweet)) {
+        return; // 🚫 skip ads entirely
+      }
+
+      if (blacklistedCreators.includes(handle)) {
+        replaceWithCat(tweet, handle);
+        return;
+      }
+
+      injectTweetControls(tweet, handle);
+    });
+}
+
+// ----------------------
+// Filters
+// ----------------------
+function isTrusted(media) {
+  const tweet = media.closest('[data-testid="tweet"]');
   const handle = tweet && getTweetHandle(tweet);
   return handle && trustedCreators.includes(handle);
 }
-
-function isAdElement(mediaElement) {
-  const tweet = mediaElement.closest('[data-testid="tweet"]');
+function isAdElement(tweet) {
   if (!tweet) return false;
   return Array.from(tweet.querySelectorAll("span")).some(
     (s) => s.textContent.trim() === "Ad"
@@ -346,17 +360,19 @@ function isAdElement(mediaElement) {
 // Protect Media
 // ----------------------
 function protectMedia() {
+  checkTweets();
+
   document.querySelectorAll("video:not([data-protected])").forEach((vid) => {
     const tweet = vid.closest('[data-testid="tweet"]');
     if (!tweet) return;
 
-    if (isBlacklisted(tweet)) {
-      replaceWithCat(tweet);
+    const handle = getTweetHandle(tweet);
+    if (handle && blacklistedCreators.includes(handle)) {
+      replaceWithCat(tweet, handle);
       vid.dataset.protected = "true";
       return;
     }
-
-    if (isAdElement(vid) || isTrusted(vid)) {
+    if (isAdElement(tweet) || isTrusted(vid)) {
       vid.dataset.protected = "true";
     } else {
       wrapMediaWithShield(vid);
@@ -367,14 +383,14 @@ function protectMedia() {
     const tweet = frame.closest('[data-testid="tweet"]');
     if (!tweet) return;
 
-    if (isBlacklisted(tweet)) {
-      replaceWithCat(tweet);
+    const handle = getTweetHandle(tweet);
+    if (handle && blacklistedCreators.includes(handle)) {
+      replaceWithCat(tweet, handle);
       frame.dataset.protected = "true";
       return;
     }
-
     if (frame.src.includes("twitter.com") || frame.src.includes("x.com")) {
-      if (isAdElement(frame) || isTrusted(frame)) {
+      if (isAdElement(tweet) || isTrusted(frame)) {
         frame.dataset.protected = "true";
       } else {
         wrapMediaWithShield(frame);
@@ -394,5 +410,4 @@ function initShield() {
     observer.observe(document.body, { childList: true, subtree: true });
   });
 }
-
 initShield();
